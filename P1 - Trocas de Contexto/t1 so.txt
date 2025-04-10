@@ -1,0 +1,16 @@
+Explique o objetivo e os parâmetros de cada uma das quatro funções acima.
+
+getcontext(&a) : salva o contexto atual na variável a.
+setcontext(&a) : restaura um contexto salvo anteriormente na variável a.
+swapcontext(&a,&b) : salva o contexto atual em a e restaura o contexto salvo anteriormente em b. essencialmente troca um contexto pelo outro
+makecontext(&a, …) : ajusta alguns valores internos do contexto salvo em a.
+
+Explique o significado dos campos da estrutura ucontext_t que foram utilizados no código.
+
+dentro da struct ucontext_t existe o campo da pilha, onde existe o endereço da pilha, o tamanho da pilha e as flags da pilha.
+
+Explique cada linha do código de contexts.c que chame uma dessas funções ou que manipule estruturas do tipo ucontext_t.
+
+o código armazena o contexto do inicio da execução em ContextPing, depois inicializa a pilha de contexto de Context ping, então armazena a função BodyPing no contexto de execução ContextPing, essencialmente coloca o endereço de bodyping no program counter do registrador. depois faz as mesmas coisas com contextpong, configurando tudo e deixando pronto.
+
+finalmente, troca os contextos main por ping, depois por pong. isso faz a execução se tornar alternada entre ping e pong.
