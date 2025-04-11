@@ -30,7 +30,8 @@ struct task_t *scheduler(){
     #endif
     struct task_t *next;
     next = (task_t*)task_queue;
-    // queue_remove(&task_queue, (queue_t *) next);
+    queue_remove(&task_queue, (queue_t*)next);
+    queue_append(&task_queue, (queue_t*)next);
     #ifdef DEBUG
         printf ("scheduler: tarefa %d\n", next->id) ;
         printf ("scheduler: %d tarefas na fila\n", queue_size(task_queue));
@@ -51,7 +52,7 @@ void dispatcher(){
         if (next_task){
             next_task->status = 1; // status = 1 significa que a tarefa está rodando
             task_switch(next_task);
-            queue_append(&ready_queue, (queue_t*) next_task);
+            // queue_append(&ready_queue, (queue_t*) next_task);
             // switch (next_task->status){
             //     case 0: // tarefa pronta
             //         break;
@@ -86,7 +87,10 @@ void ppos_init (){
     #endif
     setvbuf (stdout, 0, _IONBF, 0) ;
     
-    task_queue = malloc(sizeof(queue_t));
+    // task_queue = malloc(sizeof(queue_t));
+    task_queue = NULL;
+    ready_queue = NULL;
+
     dispatcher_task = malloc(sizeof(task_t));
     getcontext (&main_context) ;
     char *stack = malloc (STACKSIZE) ;
@@ -159,11 +163,15 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     makecontext (&new_context, (void*)start_routine, 1, arg) ;
     
     task->context = new_context;
-    // task->status = 0; // status = 0 significa que a tarefa está pronta
-    // task->prev = NULL;
-    // task->next = NULL;
+    task->status = 0; // status = 0 significa que a tarefa está pronta
+    task->prev = NULL;
+    task->next = NULL;
     task->id = task_id_counter++;
-    
+
+    if (task != dispatcher_task) {
+        queue_append(&task_queue, (queue_t*) task);
+    }
+
     #ifdef DEBUG
         printf ("task_init: saindo\n") ;
     #endif
@@ -188,6 +196,9 @@ void task_exit (int exit_code){
     #ifdef DEBUG
         printf ("task_exit: entrando\n") ;
     #endif
+    if (current_task != main_task) {
+        queue_remove((queue_t**)&task_queue, (queue_t*)current_task);
+    }
     task_switch(main_task);
     // exit(exit_code);
     // free(current_task->context.uc_stack.ss_sp);
