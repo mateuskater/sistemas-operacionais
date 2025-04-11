@@ -25,15 +25,28 @@ queue_t *ready_queue = NULL;
 struct task_t *dispatcher_task;
 
 struct task_t *scheduler(){
+    #ifdef DEBUG
+        printf ("scheduler: entrando\n") ;
+    #endif
     struct task_t *next;
     next = (task_t*)task_queue;
     // queue_remove(&task_queue, (queue_t *) next);
+    #ifdef DEBUG
+        printf ("scheduler: tarefa %d\n", next->id) ;
+        printf ("scheduler: %d tarefas na fila\n", queue_size(task_queue));
+    #endif
     return next;
 }
 
 void dispatcher(){
     // queue_remove(&task_queue, (queue_t *) dispatcher_task);
+    #ifdef DEBUG
+        printf ("dispatcher: entrando\n") ;
+    #endif
     while (queue_size(task_queue) > 1){
+        #ifdef DEBUG
+            printf ("dispatcher: %d tarefas na fila\n", queue_size(task_queue));
+        #endif
         struct task_t *next_task = scheduler();
         if (next_task){
             next_task->status = 1; // status = 1 significa que a tarefa está rodando
@@ -49,16 +62,28 @@ void dispatcher(){
             // }
         }
     }
+    #ifdef DEBUG
+        printf ("dispatcher: saindo\n") ;
+    #endif
     task_exit(0);
 }
 
 void task_yield (){
+    #ifdef DEBUG
+        printf ("task_yield: entrando\n") ;
+    #endif
     // current_task->status = 0;
     // queue_append(&ready_queue, (queue_t*) current_task);
     task_switch(dispatcher_task);
+    #ifdef DEBUG
+        printf ("task_yield: saindo\n") ;
+    #endif
 }
 
 void ppos_init (){
+    #ifdef DEBUG
+        printf ("ppos_init: entrando\n") ;
+    #endif
     setvbuf (stdout, 0, _IONBF, 0) ;
     
     task_queue = malloc(sizeof(queue_t));
@@ -94,15 +119,24 @@ void ppos_init (){
     task_id_counter = 1;
     
     // Cria a tarefa dispatcher
+    #ifdef DEBUG
+        printf ("criando tarefa: dispatcher\n") ;
+    #endif
     task_init(dispatcher_task, dispatcher, NULL);
 
     // queue_append(&ready_queue, (queue_t*) dispatcher_task);
     // queue_append(&ready_queue, (queue_t*) main_task);
     current_task = main_task;
+    #ifdef DEBUG
+        printf ("ppos_init: saindo\n") ;
+    #endif
 
 }
 
 int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
+    #ifdef DEBUG
+        printf ("task_init: entrando\n") ;
+    #endif
     ucontext_t new_context;
 
     getcontext (&new_context) ;
@@ -127,19 +161,36 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     // task->next = NULL;
     task->id = task_id_counter++;
     makecontext (&new_context, (void*)start_routine, 1, arg) ;
+    #ifdef DEBUG
+        printf ("task_init: saindo\n") ;
+    #endif
     return task->id;
 }
 
 int task_switch (task_t *task){
+    #ifdef DEBUG
+        printf ("task_switch: entrando\n") ;
+    #endif
     struct task_t *prev_task = current_task;
     current_task = task;
     swapcontext (&(prev_task->context), &(current_task->context)) ;
+    #ifdef DEBUG
+        printf ("task_switch: saindo\n") ;
+    #endif
+
     return 0;
 }
 
 void task_exit (int exit_code){
+    #ifdef DEBUG
+        printf ("task_exit: entrando\n") ;
+    #endif
     task_switch(main_task);
     // exit(exit_code);
+    // free(current_task->context.uc_stack.ss_sp);
+    #ifdef DEBUG
+        printf ("task_exit: saindo\n") ;
+    #endif
 }
 
 int task_id (){
