@@ -155,12 +155,15 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
        return -1 ;
     }
  
+    
+    makecontext (&new_context, (void*)start_routine, 1, arg) ;
+    
     task->context = new_context;
     // task->status = 0; // status = 0 significa que a tarefa está pronta
     // task->prev = NULL;
     // task->next = NULL;
     task->id = task_id_counter++;
-    makecontext (&new_context, (void*)start_routine, 1, arg) ;
+    
     #ifdef DEBUG
         printf ("task_init: saindo\n") ;
     #endif
