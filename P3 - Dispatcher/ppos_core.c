@@ -202,7 +202,7 @@ void task_exit (int exit_code){
         printf ("task_exit: entrando\n") ;
     #endif
     if (current_task != main_task) {
-        queue_remove((queue_t**)&task_queue, (queue_t*)current_task);
+        queue_remove((queue_t**)task_queue, (queue_t*)current_task);
     }
     task_switch(main_task);
     // exit(exit_code);
