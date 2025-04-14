@@ -16,22 +16,22 @@ GRR: 20190366
 
 #define STACKSIZE 32*1024
 int task_id_counter = 0;
-struct task_t *current_task; 
-struct task_t *main_task;
+task_t *current_task; 
+task_t *main_task;
+task_t *dispatcher_task;
 ucontext_t main_context;
 
 queue_t *task_queue = NULL;
 queue_t *ready_queue = NULL;
-struct task_t *dispatcher_task;
 
-struct task_t *scheduler(){
+task_t *scheduler(){
     #ifdef DEBUG
         printf ("scheduler: entrando\n") ;
     #endif
-    struct task_t *next;
-    next = (task_t*)task_queue;
-    queue_remove(&task_queue, (queue_t*)next);
-    queue_append(&task_queue, (queue_t*)next);
+    task_t *next;
+    next = (task_t*)ready_queue;
+    queue_remove(&ready_queue, (queue_t*)next);
+    // queue_append(&task_queue, (queue_t*)next);
     #ifdef DEBUG
         printf ("scheduler: tarefa %d\n", next->id) ;
         printf ("scheduler: %d tarefas na fila\n", queue_size(task_queue));
@@ -44,14 +44,14 @@ void dispatcher(){
     #ifdef DEBUG
         printf ("dispatcher: entrando\n") ;
     #endif
-    while (queue_size(task_queue) > 1){
+    task_t *next;
+    while (next = scheduler()){
         #ifdef DEBUG
             printf ("dispatcher: %d tarefas na fila\n", queue_size(task_queue));
         #endif
-        struct task_t *next_task = scheduler();
-        if (next_task){
-            next_task->status = 1; // status = 1 significa que a tarefa está rodando
-            task_switch(next_task);
+        if (next){
+            next->status = 1; // status = 1 significa que a tarefa está rodando
+            task_switch(next);
             // queue_append(&ready_queue, (queue_t*) next_task);
             // switch (next_task->status){
             //     case 0: // tarefa pronta
@@ -74,7 +74,7 @@ void task_yield (){
         printf ("task_yield: entrando\n") ;
     #endif
     // current_task->status = 0;
-    // queue_append(&ready_queue, (queue_t*) current_task);
+    queue_append(&ready_queue, (queue_t*) current_task);
     task_switch(dispatcher_task);
     #ifdef DEBUG
         printf ("task_yield: saindo\n") ;
@@ -131,6 +131,7 @@ void ppos_init (){
     // queue_append(&ready_queue, (queue_t*) dispatcher_task);
     // queue_append(&ready_queue, (queue_t*) main_task);
     current_task = main_task;
+    // task_yield();
     #ifdef DEBUG
         printf ("ppos_init: saindo\n") ;
     #endif
@@ -182,7 +183,7 @@ int task_switch (task_t *task){
     #ifdef DEBUG
         printf ("task_switch: entrando\n") ;
     #endif
-    struct task_t *prev_task = current_task;
+    task_t *prev_task = current_task;
     current_task = task;
     swapcontext (&(prev_task->context), &(current_task->context)) ;
     #ifdef DEBUG
