@@ -22,15 +22,20 @@ task_t *dispatcher_task;
 ucontext_t main_context;
 
 queue_t *task_queue = NULL;
-queue_t *ready_queue = NULL;
 
 task_t *scheduler(){
     #ifdef DEBUG
         printf ("scheduler: entrando\n") ;
     #endif
+    if (queue_size(task_queue) == 0){
+        #ifdef DEBUG
+            printf ("scheduler: saindo\n") ;
+        #endif
+        return NULL;
+    }
     task_t *next;
-    next = (task_t*)ready_queue;
-    queue_remove(&ready_queue, (queue_t*)next);
+    next = (task_t*)task_queue;
+    queue_remove(&task_queue, (queue_t*)next);
     // queue_append(&task_queue, (queue_t*)next);
     #ifdef DEBUG
         printf ("scheduler: tarefa %d\n", next->id) ;
@@ -74,7 +79,7 @@ void task_yield (){
         printf ("task_yield: entrando\n") ;
     #endif
     // current_task->status = 0;
-    queue_append(&ready_queue, (queue_t*) current_task);
+    queue_append(&task_queue, (queue_t*) current_task);
     task_switch(dispatcher_task);
     #ifdef DEBUG
         printf ("task_yield: saindo\n") ;
@@ -89,7 +94,6 @@ void ppos_init (){
     
     // task_queue = malloc(sizeof(queue_t));
     task_queue = NULL;
-    ready_queue = NULL;
 
     dispatcher_task = malloc(sizeof(task_t));
     getcontext (&main_context) ;

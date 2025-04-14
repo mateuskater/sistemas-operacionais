@@ -37,7 +37,7 @@ int main (int argc, char *argv[])
    task_init (&Pong, Body, "                Pong") ;
    task_init (&Pung, Body, "                    Pung") ;
 
-   task_yield() ;
+   // task_yield() ;
    
    printf ("main: fim\n");
    task_exit (0);
