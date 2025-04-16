@@ -50,23 +50,21 @@ void dispatcher(){
         printf ("dispatcher: entrando\n") ;
     #endif
     task_t *next;
-    while (next = scheduler()){
+    while ((next = scheduler())){
         #ifdef DEBUG
             printf ("dispatcher: %d tarefas na fila\n", queue_size(task_queue));
         #endif
-        if (next){
-            next->status = 1; // status = 1 significa que a tarefa está rodando
-            task_switch(next);
-            // queue_append(&ready_queue, (queue_t*) next_task);
-            // switch (next_task->status){
-            //     case 0: // tarefa pronta
-            //         break;
-            //     case 1: // tarefa rodando
-            //         break;
-            //     default:
-            //         break;
-            // }
-        }
+        // next->status = 1; // status = 1 significa que a tarefa está rodando
+        task_switch(next);
+        // queue_append(&ready_queue, (queue_t*) next_task);
+        // switch (next_task->status){
+        //     case 0: // tarefa pronta
+        //         break;
+        //     case 1: // tarefa rodando
+        //         break;
+        //     default:
+        //         break;
+        // }
     }
     #ifdef DEBUG
         printf ("dispatcher: saindo\n") ;
@@ -125,7 +123,7 @@ void ppos_init (){
     main_task->next = NULL;
     current_task = main_task;
     task_id_counter = 1;
-    
+    // queue_append(&task_queue, (queue_t*) main_task);
     // Cria a tarefa dispatcher
     #ifdef DEBUG
         printf ("criando tarefa: dispatcher\n") ;
@@ -134,8 +132,8 @@ void ppos_init (){
 
     // queue_append(&ready_queue, (queue_t*) dispatcher_task);
     // queue_append(&ready_queue, (queue_t*) main_task);
-    current_task = main_task;
-    // task_yield();
+    current_task = dispatcher_task;
+    task_yield();
     #ifdef DEBUG
         printf ("ppos_init: saindo\n") ;
     #endif
@@ -146,17 +144,17 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     #ifdef DEBUG
         printf ("task_init: entrando\n") ;
     #endif
-    ucontext_t new_context;
+    // ucontext_t new_context;
 
-    getcontext (&new_context) ;
+    getcontext (&task->context) ;
 
     char *stack = malloc (STACKSIZE) ;
     if (stack)
     {
-        new_context.uc_stack.ss_sp = stack ;
-        new_context.uc_stack.ss_size = STACKSIZE ;
-        new_context.uc_stack.ss_flags = 0 ;
-        new_context.uc_link = 0 ;
+        task->context.uc_stack.ss_sp = stack ;
+        task->context.uc_stack.ss_size = STACKSIZE ;
+        task->context.uc_stack.ss_flags = 0 ;
+        task->context.uc_link = 0 ;
     }
     else
     {
@@ -165,18 +163,19 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     }
  
     
-    makecontext (&new_context, (void*)start_routine, 1, arg) ;
+    makecontext (&task->context, (void*)start_routine, 1, arg) ;
     
-    task->context = new_context;
+    // task->context = new_context;
     task->status = 0; // status = 0 significa que a tarefa está pronta
     task->prev = NULL;
     task->next = NULL;
     task->id = task_id_counter++;
 
-    if (task != dispatcher_task) {
-        queue_append(&task_queue, (queue_t*) task);
-    }
+    // if (task != dispatcher_task) {
+    //     queue_append(&task_queue, (queue_t*) task);
+    // }
 
+    // task_yield();
     #ifdef DEBUG
         printf ("task_init: saindo\n") ;
     #endif
@@ -202,9 +201,15 @@ void task_exit (int exit_code){
         printf ("task_exit: entrando\n") ;
     #endif
     if (current_task != main_task) {
-        queue_remove((queue_t**)task_queue, (queue_t*)current_task);
+        queue_remove(&task_queue, (queue_t*)current_task);
     }
-    task_switch(main_task);
+    if (current_task == dispatcher_task) {
+        // free_task_stack(current_task);
+        exit(EXIT_SUCCESS);
+    } else {
+        current_task->status = 2; 
+        task_switch(dispatcher_task);
+    }
     // exit(exit_code);
     // free(current_task->context.uc_stack.ss_sp);
     #ifdef DEBUG

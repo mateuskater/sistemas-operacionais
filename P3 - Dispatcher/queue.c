@@ -79,7 +79,7 @@ int queue_append(queue_t **queue, queue_t *elem)
         queue_t *last = (*queue)->prev;
         last->next = elem;
         elem->prev = last;
-        elem->next = *queue;
+        elem->next = last->next;
         (*queue)->prev = elem;
     }
 
