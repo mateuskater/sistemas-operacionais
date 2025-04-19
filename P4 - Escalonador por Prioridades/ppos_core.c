@@ -33,14 +33,54 @@ task_t *scheduler(){
         #endif
         return NULL;
     }
-    task_t *next;
-    next = (task_t*)task_queue;
-    queue_remove(&task_queue, (queue_t*)next);
+    task_t *cur = (task_t*)task_queue; // ponteiro para a tarefa atual
+    task_t *next = (task_t*)task_queue->next; // ponteiro para a próxima tarefa
+    while (next != (task_t*)task_queue){
+        if (next->prio_dinamica <= cur->prio_dinamica){
+            cur = next;
+        }
+        next = next->next;
+    }
+
+    next = cur;
+    do {
+        if (next->prio_dinamica > -20){
+            (next->prio_dinamica)--;
+        }
+        next = next->next;
+    } while (next != (task_t*)task_queue);
+    cur->prio_dinamica = cur->prio_estatica;
     #ifdef DEBUG
         printf ("scheduler: tarefa %d\n", next->id) ;
         printf ("scheduler: %d tarefas na fila\n", queue_size(task_queue));
     #endif
-    return next;
+    return cur;
+}
+
+void task_setprio (task_t *task, int prio){
+    #ifdef DEBUG
+        printf ("task_setprio: entrando\n") ;
+    #endif
+    if (task == NULL) {
+        task = current_task;
+    }
+    task->prio_estatica = prio;
+    #ifdef DEBUG
+        printf ("task_setprio: saindo\n") ;
+    #endif
+}
+
+int task_getprio (task_t *task){
+    #ifdef DEBUG
+        printf ("task_getprio: entrando\n") ;
+    #endif
+    if (task == NULL) {
+        task = current_task;
+    }
+    #ifdef DEBUG
+        printf ("task_getprio: saindo\n") ;
+    #endif
+    return task->prio_estatica;
 }
 
 void dispatcher(){
@@ -132,7 +172,6 @@ void ppos_init (){
     // queue_append(&ready_queue, (queue_t*) dispatcher_task);
     // queue_append(&ready_queue, (queue_t*) main_task);
     current_task = dispatcher_task;
-    task_yield();
     #ifdef DEBUG
         printf ("ppos_init: saindo\n") ;
     #endif
@@ -166,6 +205,8 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     
     // task->context = new_context;
     task->status = 0; // status = 0 significa que a tarefa está pronta
+    task->prio_dinamica = 0; // prioridade padrão
+    task->prio_estatica = 0; // prioridade padrão
     task->prev = NULL;
     task->next = NULL;
     task->id = task_id_counter++;
