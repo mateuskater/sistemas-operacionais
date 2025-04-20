@@ -18,12 +18,15 @@ int queue_size(queue_t *queue)
     }
 
     int count = 1;
-    queue_t *aux = queue->next;
+    queue_t *current, *first;
 
-    while (aux != queue)
+    first = queue->next;
+    current = first->next;
+
+    while (current != first)
     {
         count++;
-        aux = aux->next;
+        current = current->next;
     }
 
     return count;
@@ -81,6 +84,7 @@ int queue_append(queue_t **queue, queue_t *elem)
         elem->prev = last;
         elem->next = *queue;
         (*queue)->prev = elem;
+        // last->next->prev = elem;
     }
 
     return 0;
