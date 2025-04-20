@@ -97,37 +97,38 @@ void dispatcher(){
         printf ("dispatcher: entrando\n") ;
     #endif
     task_t *next;
-    while (1){
+    while (queue_size(task_queue) > 0){
         #ifdef DEBUG
             printf ("dispatcher: %d tarefas na fila\n", queue_size(task_queue));
         #endif
         next = scheduler();
-        if (!next)
-            break;
-        // next->status = 1; // status = 1 significa que a tarefa está rodando
-        task_switch(next);
-        // queue_append(&task_queue, (queue_t*) next);
-        switch (next->status){
-            case 0: // tarefa pronta
-                break;
-            case 1: // tarefa rodando
-                break;
-            default:
-                break;
+        if (next){
+            // next->status = 1; // status = 1 significa que a tarefa está rodando
+            task_switch(next);
+            // queue_append(&task_queue, (queue_t*) next);
+            // switch (next->status){
+            //     case 0: // tarefa pronta
+            //         break;
+            //     case 1: // tarefa rodando
+            //         break;
+            //     default:
+            //         break;
+            // }
         }
     }
+    task_exit(0);
     #ifdef DEBUG
         printf ("dispatcher: saindo\n") ;
     #endif
-    task_exit(0);
 }
 
 void task_yield (){
     #ifdef DEBUG
         printf ("task_yield: entrando\n") ;
     #endif
-    current_task->status = 0;
+    queue_remove((queue_t **)&task_queue, (queue_t*) current_task);
     queue_append((queue_t **)&task_queue, (queue_t*) current_task);
+    current_task->status = 0;
     task_switch(&dispatcher_task);
     #ifdef DEBUG
         printf ("task_yield: saindo\n") ;
@@ -184,8 +185,8 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     task->status = 0; // status = 0 significa que a tarefa está pronta
     task->prio_dinamica = 0; // prioridade padrão
     task->prio_estatica = 0; // prioridade padrão
-    // task->prev = NULL;
-    // task->next = NULL;
+    task->prev = NULL;
+    task->next = NULL;
     task->id = task_id_counter++;
 
     if (task != &dispatcher_task) {
