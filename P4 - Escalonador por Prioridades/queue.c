@@ -15,8 +15,7 @@ int queue_size(queue_t *queue)
     #ifdef DEBUG
         printf("queue_size: entrando\n");
     #endif
-    if (queue == NULL)
-    {
+    if (queue == NULL){
         return 0;
     }
 
@@ -26,8 +25,7 @@ int queue_size(queue_t *queue)
     first = queue->next;
     current = first->next;
 
-    while (current != first)
-    {
+    while (current != first){
         count++;
         current = current->next;
     }
@@ -38,19 +36,15 @@ int queue_size(queue_t *queue)
     return count;
 }
 
-void queue_print(char *name, queue_t *queue, void print_elem(void *))
-{
+void queue_print(char *name, queue_t *queue, void print_elem(void *)){
     printf("%s: [", name);
 
-    if (queue != NULL)
-    {
+    if (queue != NULL){
         queue_t *aux = queue;
-        do
-        {
+        do{
             print_elem(aux);
             aux = aux->next;
-            if (aux != queue)
-            {
+            if (aux != queue){
                 printf(" ");
             }
         } while (aux != queue);
@@ -59,35 +53,28 @@ void queue_print(char *name, queue_t *queue, void print_elem(void *))
     printf("]\n");
 }
 
-int queue_append(queue_t **queue, queue_t *elem)
-{
+int queue_append(queue_t **queue, queue_t *elem){
     #ifdef DEBUG
         printf("queue_append: entrando\n");
     #endif
-    if (queue == NULL)
-    {
+    if (queue == NULL){
         printf("Erro ao adicionar elemento na fila: Fila nao existe\n");
         return -1;
     }
-    if (elem == NULL)
-    {
+    if (elem == NULL){
         printf("Erro ao adicionar elemento na fila: Elemento nao existe\n");
         return -1;
     }
-    if (elem->next != NULL || elem->prev != NULL)
-    {
+    if (elem->next != NULL || elem->prev != NULL){
         printf("Erro ao adicionar elemento na fila: Elemento ja esta em outra fila\n");
         return -1;
     }
 
-    if (*queue == NULL)
-    {
+    if (*queue == NULL){
         *queue = elem;
         elem->next = elem;
         elem->prev = elem;
-    }
-    else
-    {
+    }else{
         queue_t *last = (*queue)->prev;
         last->next = elem;
         elem->prev = last;
@@ -102,14 +89,12 @@ int queue_append(queue_t **queue, queue_t *elem)
     return 0;
 }
 
-int queue_remove(queue_t **queue, queue_t *elem)
-{
+int queue_remove(queue_t **queue, queue_t *elem){
     #ifdef DEBUG
         printf("queue_remove: entrando\n");
     #endif
 
-    if (queue == NULL || *queue == NULL)
-    {
+    if (queue == NULL || *queue == NULL){
         printf("Erro ao remover elemento da fila: Fila nao existe\n");
         return -1;
     }
@@ -147,4 +132,3 @@ int queue_remove(queue_t **queue, queue_t *elem)
 
     return 0;
 }
-
