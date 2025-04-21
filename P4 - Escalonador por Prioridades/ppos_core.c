@@ -57,8 +57,6 @@ task_t *scheduler(){
         cur_task = (task_t*) cur_q;
         if (cur_task != next && cur_task->prio_dinamica > -20){
             cur_task->prio_dinamica--;
-        // if (next->prio_dinamica > -20){
-        //     (next->prio_dinamica)--;
         }
         cur_q = cur_q->next;
     } while (cur_q != task_queue);
@@ -112,7 +110,6 @@ void dispatcher(){
         if (next){
             next->status = RUNNING; 
             task_switch(next); // troca o contexto da tarefa atual pelo da próxima tarefa
-            // queue_append(&task_queue, (queue_t*) next);
             switch (next->status){
                 case READY: // tarefa pronta
                     break;
@@ -138,9 +135,7 @@ void task_yield (){
     #endif
     // se a tarefa atual for o dispatcher, não faz nada
     if (current_task != &dispatcher_task){ 
-        // remove a tarefa atual da fila de tarefas e adiciona novamente
         current_task->status = READY; // muda o status da tarefa para pronta
-        // queue_remove((queue_t **)&task_queue, (queue_t*) current_task);
         queue_append((queue_t **)&task_queue, (queue_t*) current_task);
     }
     task_switch(&dispatcher_task); // troca o contexto da tarefa atual pelo do dispatcher
@@ -238,11 +233,7 @@ void task_exit (int exit_code){
     #ifdef DEBUG
         printf ("task_exit: entrando\n") ;
     #endif
-    // if (current_task != main_task) {
-    //     queue_remove(&task_queue, (queue_t*)current_task);
-    // }
     if (current_task == &dispatcher_task) {
-        // exit(exit_code);
         task_switch(&main_task); // transfere o controle para a tarefa main
         exit_code = exit_code;
     } else {
@@ -250,8 +241,6 @@ void task_exit (int exit_code){
         // queue_remove((queue_t **)&task_queue, (queue_t*) current_task); // remove a tarefa da fila
         task_switch(&dispatcher_task); // ttransfere o controle para o dispatcher
     }
-    // exit(exit_code);
-    // free(current_task->context.uc_stack.ss_sp);
     #ifdef DEBUG
         printf ("task_exit: saindo\n") ;
     #endif
