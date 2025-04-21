@@ -175,28 +175,21 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     #ifdef DEBUG
         printf ("task_init: entrando\n") ;
     #endif
-    // ucontext_t new_context;
 
     getcontext (&task->context) ; // pega o contexto atual da tarefa
 
     char *stack = malloc (STACKSIZE) ; // aloca a pilha para a tarefa
-    if (stack)
-    {
+    if (stack){
         task->context.uc_stack.ss_sp = stack ;
         task->context.uc_stack.ss_size = STACKSIZE ;
         task->context.uc_stack.ss_flags = 0 ;
         task->context.uc_link = 0 ;
-    }
-    else
-    {
+    }else{
        perror ("Erro na criação da pilha: ") ;
        return -1 ;
-    }
- 
-    
+    }    
     makecontext (&task->context, (void*)start_routine, 1, arg) ; // cria o contexto da tarefa
     
-    // task->context = new_context;
     task->status = READY; // status = 0 significa que a tarefa está pronta
     task->prio_dinamica = 0; // prioridade padrão
     task->prio_estatica = 0; // prioridade padrão
