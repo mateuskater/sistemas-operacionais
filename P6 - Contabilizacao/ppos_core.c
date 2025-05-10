@@ -34,7 +34,7 @@ queue_t *task_queue;
 struct sigaction action;
 struct itimerval timer;
 
-void tick(int signum){
+void tick(){
     system_time++;
     if(current_task->user_task){
         current_task->quantum--;
