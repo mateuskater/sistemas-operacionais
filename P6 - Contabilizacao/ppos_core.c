@@ -26,6 +26,7 @@ task_t main_task;
 task_t dispatcher_task;
 task_t *current_task = &main_task; 
 ucontext_t main_context;
+unsigned int system_time = 0;
 
 queue_t *task_queue;
 
@@ -38,6 +39,11 @@ void signal_treater(int signum){
         if(current_task->quantum == 0)
             task_yield();
     }
+}
+
+unsigned int systime()
+{
+  return system_time;
 }
 
 task_t *scheduler(){

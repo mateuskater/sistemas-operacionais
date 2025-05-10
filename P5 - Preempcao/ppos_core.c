@@ -80,7 +80,7 @@ task_t *scheduler(){
         printf ("scheduler: tarefa %d\n", next->id) ;
         printf ("scheduler: %d tarefas na fila\n", queue_size(task_queue));
     #endif
-    next->quantum = 20;
+    // next->quantum = 20;
     return next;
 }
 
@@ -124,6 +124,10 @@ void dispatcher(){
         next = scheduler(); // chama o escalonador para pegar a próxima tarefa
         if (next){
             next->status = RUNNING; 
+            next->quantum = 20; // reinicia o quantum da tarefa
+            #ifdef DEBUG
+                printf ("dispatcher: tarefa %d\n", next->id) ;
+            #endif
             task_switch(next); // troca o contexto da tarefa atual pelo da próxima tarefa
             switch (next->status){
                 case READY: // tarefa pronta
@@ -190,6 +194,7 @@ void ppos_init (){
     main_task.next = NULL;
     main_task.context = main_context; // inicializa o contexto da tarefa main
     main_task.user_task = 0;
+    main_task.quantum = 0;
 
     queue_append((queue_t **)&task_queue, (queue_t*) &main_task);
     task_switch(&dispatcher_task); // transfere o controle para o dispatcher
