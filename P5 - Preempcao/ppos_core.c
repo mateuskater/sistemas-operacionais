@@ -32,7 +32,7 @@ queue_t *task_queue;
 struct sigaction action;
 struct itimerval timer;
 
-void signal_treater(int signum){
+void tick(int signum){
     if(current_task->user_task){
         current_task->quantum--;
         if(current_task->quantum == 0)
@@ -169,7 +169,7 @@ void ppos_init (){
     #endif
     setvbuf (stdout, 0, _IONBF, 0) ; // desabilita o buffer da saída padrão
 
-    action.sa_handler = signal_treater;
+    action.sa_handler = tick;
     sigemptyset (&action.sa_mask) ;
     action.sa_flags = 0 ;
     sigaction(SIGALRM, &action,0);

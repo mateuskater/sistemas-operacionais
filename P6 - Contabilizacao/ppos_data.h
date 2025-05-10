@@ -20,6 +20,9 @@ typedef struct task_t
   int prio_dinamica;     // prioridade dinamica
   short user_task; // booleano pra user task ou nao
   short quantum;
+  unsigned int start_time;
+  unsigned int exec_time; // tempo de execução da tarefa
+  unsigned int activations; // contagem de ativações da tarefa
 } task_t ;
 
 // estrutura que define um semáforo

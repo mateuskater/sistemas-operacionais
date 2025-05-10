@@ -21,6 +21,7 @@ GRR: 20190366
 #define SUSPENDED 2
 
 #define STACKSIZE 32*1024
+#define QUANTUM_RESET 20
 int task_id_counter = 0;
 task_t main_task;
 task_t dispatcher_task;
@@ -33,16 +34,17 @@ queue_t *task_queue;
 struct sigaction action;
 struct itimerval timer;
 
-void signal_treater(int signum){
+void tick(int signum){
+    system_time++;
     if(current_task->user_task){
         current_task->quantum--;
+        current_task->exec_time++;
         if(current_task->quantum == 0)
             task_yield();
     }
 }
 
-unsigned int systime()
-{
+unsigned int systime(){
   return system_time;
 }
 
@@ -86,7 +88,7 @@ task_t *scheduler(){
         printf ("scheduler: tarefa %d\n", next->id) ;
         printf ("scheduler: %d tarefas na fila\n", queue_size(task_queue));
     #endif
-    next->quantum = 20;
+    next->quantum = QUANTUM_RESET;
     return next;
 }
 
@@ -171,7 +173,7 @@ void ppos_init (){
     #endif
     setvbuf (stdout, 0, _IONBF, 0) ; // desabilita o buffer da saída padrão
 
-    action.sa_handler = signal_treater;
+    action.sa_handler = tick;
     sigemptyset (&action.sa_mask) ;
     action.sa_flags = 0 ;
     sigaction(SIGALRM, &action,0);
@@ -187,8 +189,8 @@ void ppos_init (){
     #ifdef DEBUG
         printf ("criando tarefa: dispatcher\n") ;
     #endif
+    main_task.id = 0;
     task_init(&dispatcher_task, dispatcher, NULL); // cria a tarefa dispatcher
-    main_task.id = task_id_counter++;
     main_task.status = READY;
     main_task.prio_dinamica = 0; // prioridade padrão
     main_task.prio_estatica = 0; // prioridade padrão
@@ -232,6 +234,9 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     task->id = task_id_counter++;
     task->user_task = 0;
     task->quantum = 0;
+    task->start_time = systime();
+    task->exec_time = 0;
+    task->activations = 0;
     if (task != &dispatcher_task) { // não adiciona o dispatcher na fila de tarefas
         task->user_task = 1;
         queue_append((queue_t **)&task_queue, (queue_t*) task);
@@ -250,6 +255,8 @@ int task_switch (task_t *task){
     #endif
     task_t *prev_task = current_task; // ponteiro para a tarefa atual
     current_task = task; // atualiza a tarefa atual
+    current_task->status = RUNNING; // muda o status da tarefa para rodando
+    current_task->activations++; // incrementa o contador de ativações da tarefa
     swapcontext (&(prev_task->context), &(current_task->context)) ; // troca o contexto da tarefa atual pelo da próxima tarefa
     #ifdef DEBUG
         printf ("task_switch: saindo\n") ;
@@ -262,6 +269,8 @@ void task_exit (int exit_code){
     #ifdef DEBUG
         printf ("task_exit: entrando\n") ;
     #endif
+    printf("Task %d exit: execution time %d ms, processor time %d ms, %d activations\n",current_task->id,
+             systime() - current_task->start_time, current_task->exec_time, current_task->activations);
     if (current_task == &dispatcher_task) {
         task_switch(&main_task); // transfere o controle para a tarefa main
         exit_code = exit_code;
