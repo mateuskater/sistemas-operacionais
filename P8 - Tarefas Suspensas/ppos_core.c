@@ -30,9 +30,68 @@ ucontext_t main_context;
 unsigned int system_time = 0;
 
 queue_t *task_queue;
+queue_t *suspended_queue;
 
 struct sigaction action;
 struct itimerval timer;
+
+int task_wait (task_t *task){
+    // espera a tarefa indicada terminar
+    #ifdef DEBUG
+        printf ("task_wait: entrando\n") ;
+    #endif
+    if (task == NULL) {
+        return -1;
+    }
+    task_suspend(&task->suspended_queue); // suspende a tarefa atual
+    while (task->status == RUNNING){
+        // task_sleep(1); // suspende a tarefa atual por 1ms
+        task_id_counter = task_id_counter;
+    }
+    task_awake(current_task, &task->suspended_queue); // acorda a tarefa atual
+    current_task->status = READY; // muda o status da tarefa para pronta
+    #ifdef DEBUG
+        printf ("task_wait: saindo\n") ;
+    #endif
+    return 0;
+}
+
+void task_suspend (task_t **queue){
+    // suspende a tarefa atual
+    #ifdef DEBUG
+        printf ("task_suspend: entrando\n") ;
+    #endif
+    if (current_task == &dispatcher_task) {
+        return;
+    }
+    current_task->status = SUSPENDED; // muda o status da tarefa para suspensa
+    queue_remove((queue_t **)&task_queue, (queue_t*) current_task); // remove a tarefa da fila
+    if (queue != NULL){
+        queue_append((queue_t **)queue, (queue_t*) current_task); // adiciona a tarefa na fila de tarefas
+    }
+    task_yield(); // troca o contexto da tarefa atual pelo do dispatcher
+    #ifdef DEBUG
+        printf ("task_suspend: saindo\n") ;
+    #endif
+}
+
+void task_awake (task_t * task, task_t **queue){
+    // acorda a tarefa indicada
+    #ifdef DEBUG
+        printf ("task_awake: entrando\n") ;
+    #endif
+    if (task == NULL) {
+        return;
+    }
+    if (queue != NULL){
+        queue_remove((queue_t **)queue, (queue_t*) task); // remove a tarefa da fila
+    }
+    task->status = READY; // muda o status da tarefa para pronta
+    queue_append((queue_t **)&task_queue, (queue_t*) task); // adiciona a tarefa na fila de tarefas
+    #ifdef DEBUG
+        printf ("task_awake: saindo\n") ;
+    #endif
+}
 
 void tick(){
     system_time++;
@@ -139,6 +198,8 @@ void dispatcher(){
                 case RUNNING: // tarefa rodando
                     next->status = READY; // muda o status da tarefa para pronta
                     queue_append((queue_t **)&task_queue, (queue_t*) next); // adiciona a tarefa na fila de tarefas
+                    break;
+                case SUSPENDED: // tarefa suspensa
                     break;
                 default:
                     break;
