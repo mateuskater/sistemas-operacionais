@@ -23,7 +23,7 @@ typedef struct task_t
   unsigned int start_time;
   unsigned int exec_time; // tempo de execução da tarefa
   unsigned int activations; // contagem de ativações da tarefa
-
+  int exit_code;
   struct task_t *suspended_queue; // fila de tarefas suspensas
 } task_t ;
 

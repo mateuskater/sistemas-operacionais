@@ -58,4 +58,5 @@ int queue_append (queue_t **queue, queue_t *elem) ;
 
 int queue_remove (queue_t **queue, queue_t *elem) ;
 
+int queue_search(queue_t *queue, queue_t *elem);
 #endif

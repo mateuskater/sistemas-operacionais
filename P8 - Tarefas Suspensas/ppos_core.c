@@ -19,6 +19,7 @@ GRR: 20190366
 #define READY 0
 #define RUNNING 1
 #define SUSPENDED 2
+#define FINISHED 3
 
 #define STACKSIZE 32*1024
 #define QUANTUM_RESET 20
@@ -40,20 +41,19 @@ int task_wait (task_t *task){
     #ifdef DEBUG
         printf ("task_wait: entrando\n") ;
     #endif
-    if (task == NULL) {
+    if (task == NULL || task == current_task || task->status == FINISHED){
         return -1;
     }
     task_suspend(&task->suspended_queue); // suspende a tarefa atual
-    while (task->status == RUNNING){
-        // task_sleep(1); // suspende a tarefa atual por 1ms
-        task_id_counter = task_id_counter;
-    }
+    // while (task->status == RUNNING){
+    //     // task_sleep(1); // suspende a tarefa atual por 1ms
+    //     task_id_counter = task_id_counter;
+    // }
     task_awake(current_task, &task->suspended_queue); // acorda a tarefa atual
-    current_task->status = READY; // muda o status da tarefa para pronta
     #ifdef DEBUG
         printf ("task_wait: saindo\n") ;
     #endif
-    return 0;
+    return task->exit_code;
 }
 
 void task_suspend (task_t **queue){
@@ -64,12 +64,15 @@ void task_suspend (task_t **queue){
     if (current_task == &dispatcher_task) {
         return;
     }
+    if (queue_search(task_queue, (queue_t *)current_task)){
+        queue_remove((queue_t **)&task_queue, (queue_t*) current_task); // remove a tarefa da fila
+    }
     current_task->status = SUSPENDED; // muda o status da tarefa para suspensa
-    queue_remove((queue_t **)&task_queue, (queue_t*) current_task); // remove a tarefa da fila
-    if (queue != NULL){
+    if (queue != NULL && !queue_search((queue_t*)*queue, (queue_t *)current_task)){
         queue_append((queue_t **)queue, (queue_t*) current_task); // adiciona a tarefa na fila de tarefas
     }
-    task_yield(); // troca o contexto da tarefa atual pelo do dispatcher
+    // task_yield();
+    task_switch(&dispatcher_task);
     #ifdef DEBUG
         printf ("task_suspend: saindo\n") ;
     #endif
@@ -83,7 +86,7 @@ void task_awake (task_t * task, task_t **queue){
     if (task == NULL) {
         return;
     }
-    if (queue != NULL){
+    if (queue != NULL && *queue != NULL && queue_search((queue_t*)*queue, (queue_t *)task)){
         queue_remove((queue_t **)queue, (queue_t*) task); // remove a tarefa da fila
     }
     task->status = READY; // muda o status da tarefa para pronta
@@ -213,16 +216,17 @@ void dispatcher(){
 }
 
 void task_yield (){
-    // troca o contexto da tarefa atual pelo do dispatcher
     #ifdef DEBUG
         printf ("task_yield: entrando\n") ;
     #endif
     // se a tarefa atual for o dispatcher, não faz nada
     if (current_task != &dispatcher_task){ 
-        current_task->status = READY; // muda o status da tarefa para pronta
-        queue_append((queue_t **)&task_queue, (queue_t*) current_task);
+        if (current_task->status != SUSPENDED){
+            current_task->status = READY; // muda o status da tarefa para pronta
+            queue_append((queue_t **)&task_queue, (queue_t*) current_task);
+        }
     }
-    task_switch(&dispatcher_task); // troca o contexto da tarefa atual pelo do dispatcher
+    task_switch(&dispatcher_task);
     #ifdef DEBUG
         printf ("task_yield: saindo\n") ;
     #endif
@@ -298,6 +302,7 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     task->start_time = systime();
     task->exec_time = 0;
     task->activations = 0;
+    task->suspended_queue = NULL; // fila de tarefas suspensas
     if (task != &dispatcher_task) { // não adiciona o dispatcher na fila de tarefas
         task->user_task = 1;
         queue_append((queue_t **)&task_queue, (queue_t*) task);
@@ -334,10 +339,13 @@ void task_exit (int exit_code){
              systime() - current_task->start_time, current_task->exec_time, current_task->activations);
     if (current_task == &dispatcher_task) {
         task_switch(&main_task); // transfere o controle para a tarefa main
-        exit_code = exit_code;
+        // exit_code = exit_code;
     } else {
-        current_task->status = SUSPENDED;
-        // queue_remove((queue_t **)&task_queue, (queue_t*) current_task); // remove a tarefa da fila
+        current_task->exit_code = exit_code; // armazena o código de saída da tarefa
+        current_task->status = FINISHED; // muda o status da tarefa para finalizada
+        while (current_task->suspended_queue != NULL) {
+            task_awake(current_task->suspended_queue, &current_task->suspended_queue);
+        }
         task_switch(&dispatcher_task); // ttransfere o controle para o dispatcher
     }
     #ifdef DEBUG

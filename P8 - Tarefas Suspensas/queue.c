@@ -10,6 +10,33 @@ GRR: 20190366
 #include <stdlib.h>
 #include "queue.h"
 
+int queue_search(queue_t *queue, queue_t *elem){
+    #ifdef DEBUG
+        printf("queue_search: entrando\n");
+    #endif
+    if (queue == NULL || elem == NULL){
+        return 0;
+    }
+
+    queue_t *ptr = queue;
+    int found = 0;
+    
+    if (ptr != NULL) {
+        do {
+            if (ptr == elem) {
+                found = 1;
+                break;
+            }
+            ptr = ptr->next;
+        } while (ptr != queue);
+    
+    }
+    #ifdef DEBUG
+        printf("queue_search: saindo\n");
+    #endif
+    return found;
+}
+
 int queue_size(queue_t *queue)
 {
     #ifdef DEBUG
