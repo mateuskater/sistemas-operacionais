@@ -107,7 +107,6 @@ int queue_append(queue_t **queue, queue_t *elem){
         elem->prev = last;
         elem->next = *queue;
         (*queue)->prev = elem;
-        // last->next->prev = elem;
     }
 
     #ifdef DEBUG

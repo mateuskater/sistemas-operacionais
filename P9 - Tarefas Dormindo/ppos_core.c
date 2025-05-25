@@ -31,10 +31,31 @@ ucontext_t main_context;
 unsigned int system_time = 0;
 
 queue_t *task_queue;
-queue_t *suspended_queue;
+queue_t *sleep_queue;
 
 struct sigaction action;
 struct itimerval timer;
+
+void task_sleep(int t){
+    // suspende a tarefa atual por t milissegundos
+    #ifdef DEBUG
+        printf ("task_sleep: entrando\n") ;
+    #endif
+    if (t <= 0 || current_task == &dispatcher_task){
+        return;
+    }
+    // current_task->status = SUSPENDED; // muda o status da tarefa para suspensa
+    // current_task->start_time = systime(); // armazena o tempo de início da tarefa
+    // current_task->quantum = 0; // zera o quantum da tarefa
+    current_task->wake_time = systime() + t; // armazena o tempo em que a tarefa deve ser acordada
+
+    task_suspend((task_t**)&sleep_queue); // suspende a tarefa atual
+    // queue_append((queue_t **)&sleep_queue, (queue_t*) current_task); // adiciona a tarefa na fila de tarefas suspensas
+    task_switch(&dispatcher_task); // transfere o controle para o dispatcher
+    #ifdef DEBUG
+        printf ("task_sleep: saindo\n") ;
+    #endif
+}
 
 int task_wait (task_t *task){
     // espera a tarefa indicada terminar
@@ -45,10 +66,6 @@ int task_wait (task_t *task){
         return -1;
     }
     task_suspend(&task->suspended_queue); // suspende a tarefa atual
-    // while (task->status == RUNNING){
-    //     // task_sleep(1); // suspende a tarefa atual por 1ms
-    //     task_id_counter = task_id_counter;
-    // }
     task_awake(current_task, &task->suspended_queue); // acorda a tarefa atual
     #ifdef DEBUG
         printf ("task_wait: saindo\n") ;
@@ -187,26 +204,56 @@ void dispatcher(){
         printf ("dispatcher: entrando\n") ;
     #endif
     task_t *next; // ponteiro para a próxima tarefa
-    while (queue_size(task_queue) > 0){
+    
+    // Modificado: continua rodando enquanto houver tarefas na fila de prontas OU na fila de adormecidas
+    while (queue_size(task_queue) > 0 || sleep_queue != NULL){
         #ifdef DEBUG
             printf ("dispatcher: %d tarefas na fila\n", queue_size(task_queue));
         #endif
-        next = scheduler(); // chama o escalonador para pegar a próxima tarefa
-        if (next){
-            next->status = RUNNING; 
-            task_switch(next); // troca o contexto da tarefa atual pelo da próxima tarefa
-            switch (next->status){
-                case READY: // tarefa pronta
-                    break;
-                case RUNNING: // tarefa rodando
-                    next->status = READY; // muda o status da tarefa para pronta
-                    queue_append((queue_t **)&task_queue, (queue_t*) next); // adiciona a tarefa na fila de tarefas
-                    break;
-                case SUSPENDED: // tarefa suspensa
-                    break;
-                default:
-                    break;
+        
+        // Check sleeping tasks first to wake up any that are ready
+        if (sleep_queue != NULL) {
+            task_t *cur_task = (task_t*)sleep_queue; // ponteiro para a tarefa atual
+            task_t *next_task;
+            do {
+                next_task = cur_task->next != (task_t*)sleep_queue ? (task_t*)cur_task->next : NULL;
+                if (cur_task->wake_time <= systime()) {
+                    task_awake(cur_task, (task_t**)&sleep_queue); // acorda a tarefa
+                    #ifdef DEBUG
+                        printf ("dispatcher: acordando tarefa %d\n", cur_task->id) ;
+                    #endif
+                }
+                cur_task = next_task; // atualiza o ponteiro para a próxima tarefa
+            } while (sleep_queue != NULL && next_task != NULL && next_task != (task_t*)sleep_queue);
+        }
+        
+        // Process ready tasks only if there are any
+        if (queue_size(task_queue) > 0) {
+            next = scheduler(); // chama o escalonador para pegar a próxima tarefa
+            if (next){
+                next->status = RUNNING; 
+                task_switch(next); // troca o contexto da tarefa atual pelo da próxima tarefa
+                switch (next->status){
+                    case READY: // tarefa pronta
+                        break;
+                    case RUNNING: // tarefa rodando
+                        next->status = READY; // muda o status da tarefa para pronta
+                        queue_append((queue_t **)&task_queue, (queue_t*) next); // adiciona a tarefa na fila de tarefas
+                        break;
+                    case SUSPENDED: // tarefa suspensa
+                        break;
+                    default:
+                        break;
+                }
             }
+        } else {
+            // No ready tasks but there are sleeping tasks
+            // Need to wait until a task wakes up
+            // A simple approach is to yield the CPU momentarily
+            // This allows the timer to advance and possibly wake up tasks
+            // Since we're in the dispatcher, the yield will just return here
+            // This prevents busy-waiting in a tight loop
+            task_yield();
         }
     }
     task_exit(0); // encerra o dispatcher
@@ -250,6 +297,7 @@ void ppos_init (){
     setitimer(ITIMER_REAL, &timer, 0);
 
     task_queue = NULL; // inicializa a fila de tarefas
+    sleep_queue = NULL; // inicializa a fila de tarefas suspensas
     current_task = &main_task;
     #ifdef DEBUG
         printf ("criando tarefa: dispatcher\n") ;

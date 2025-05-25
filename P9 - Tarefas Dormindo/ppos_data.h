@@ -25,6 +25,7 @@ typedef struct task_t
   unsigned int activations; // contagem de ativações da tarefa
   int exit_code;
   struct task_t *suspended_queue; // fila de tarefas suspensas
+  unsigned int wake_time; // tempo em que a tarefa deve ser acordada
 } task_t ;
 
 // estrutura que define um semáforo
