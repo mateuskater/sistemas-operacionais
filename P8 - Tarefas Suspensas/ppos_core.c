@@ -45,10 +45,6 @@ int task_wait (task_t *task){
         return -1;
     }
     task_suspend(&task->suspended_queue); // suspende a tarefa atual
-    // while (task->status == RUNNING){
-    //     // task_sleep(1); // suspende a tarefa atual por 1ms
-    //     task_id_counter = task_id_counter;
-    // }
     task_awake(current_task, &task->suspended_queue); // acorda a tarefa atual
     #ifdef DEBUG
         printf ("task_wait: saindo\n") ;
@@ -71,7 +67,6 @@ void task_suspend (task_t **queue){
     if (queue != NULL && !queue_search((queue_t*)*queue, (queue_t *)current_task)){
         queue_append((queue_t **)queue, (queue_t*) current_task); // adiciona a tarefa na fila de tarefas
     }
-    // task_yield();
     task_switch(&dispatcher_task);
     #ifdef DEBUG
         printf ("task_suspend: saindo\n") ;
@@ -128,19 +123,16 @@ task_t *scheduler(){
 
     do{
         cur_task = (task_t *) cur_q;
-        if (cur_task->prio_dinamica < next->prio_dinamica){
+        if (cur_task->prio_dinamica < next->prio_dinamica)
             next = cur_task;
-            // cur_task = next;
-        }
         cur_q = cur_q->next;
     }while (cur_q != task_queue);
 
     cur_q = task_queue;
     do {
         cur_task = (task_t*) cur_q;
-        if (cur_task != next && cur_task->prio_dinamica > -20){
+        if (cur_task != next && cur_task->prio_dinamica > -20)
             cur_task->prio_dinamica--;
-        }
         cur_q = cur_q->next;
     } while (cur_q != task_queue);
 
@@ -158,9 +150,8 @@ void task_setprio (task_t *task, int prio){
     #ifdef DEBUG
         printf ("task_setprio: entrando\n") ;
     #endif
-    if (task == NULL) {
+    if (task == NULL)
         task = current_task;
-    }
     task->prio_estatica = prio;
     #ifdef DEBUG
         printf ("task_setprio: saindo\n") ;
@@ -171,9 +162,8 @@ int task_getprio (task_t *task){
     #ifdef DEBUG
         printf ("task_getprio: entrando\n") ;
     #endif
-    if (task == NULL) {
+    if (task == NULL)
         task = current_task;
-    }
     #ifdef DEBUG
         printf ("task_getprio: saindo\n") ;
     #endif
@@ -182,7 +172,6 @@ int task_getprio (task_t *task){
 
 void dispatcher(){
     // responsavel por executar as tarefas uma após a outra
-    // queue_remove(&task_queue, (queue_t *) dispatcher_task);
     #ifdef DEBUG
         printf ("dispatcher: entrando\n") ;
     #endif
@@ -220,12 +209,11 @@ void task_yield (){
         printf ("task_yield: entrando\n") ;
     #endif
     // se a tarefa atual for o dispatcher, não faz nada
-    if (current_task != &dispatcher_task){ 
+    if (current_task != &dispatcher_task)
         if (current_task->status != SUSPENDED){
             current_task->status = READY; // muda o status da tarefa para pronta
             queue_append((queue_t **)&task_queue, (queue_t*) current_task);
         }
-    }
     task_switch(&dispatcher_task);
     #ifdef DEBUG
         printf ("task_yield: saindo\n") ;
@@ -288,7 +276,7 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     }else{
        perror ("Erro na criação da pilha: ") ;
        return -1 ;
-    }    
+    }
     makecontext (&task->context, (void*)start_routine, 1, arg) ; // cria o contexto da tarefa
     
     task->status = READY; // status = 0 significa que a tarefa está pronta
@@ -339,14 +327,12 @@ void task_exit (int exit_code){
              systime() - current_task->start_time, current_task->exec_time, current_task->activations);
     if (current_task == &dispatcher_task) {
         task_switch(&main_task); // transfere o controle para a tarefa main
-        // exit_code = exit_code;
     } else {
         current_task->exit_code = exit_code; // armazena o código de saída da tarefa
         current_task->status = FINISHED; // muda o status da tarefa para finalizada
-        while (current_task->suspended_queue != NULL) {
+        while (current_task->suspended_queue != NULL)
             task_awake(current_task->suspended_queue, &current_task->suspended_queue);
-        }
-        task_switch(&dispatcher_task); // ttransfere o controle para o dispatcher
+        task_switch(&dispatcher_task); // transfere o controle para o dispatcher
     }
     #ifdef DEBUG
         printf ("task_exit: saindo\n") ;
